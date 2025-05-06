@@ -33,9 +33,12 @@ const OnboardingScreen = ({ navigation }) => {
     businessPhone: '',
     businessEmail: '',
     businessLogo: null,
-    isPaystackMerchant: null,
-    paystackMerchantId: '',
-    paystackMerchantKey: ''
+    // New banking fields for Paystack sub-account
+    bankName: '',
+    accountNumber: '',
+    accountName: '',
+    bvn: '', // Bank Verification Number
+    acceptPaystackTerms: false
   });
 
   // Loading state for signup
@@ -110,7 +113,12 @@ const OnboardingScreen = ({ navigation }) => {
       businessLogo: formValues.businessLogo,
       businessAddress: formValues.businessAddress,
       businessPhone: formValues.businessPhone,
-      businessEmail: formValues.businessEmail
+      businessEmail: formValues.businessEmail,
+      // Save bank details
+      bankName: formValues.bankName,
+      accountNumber: formValues.accountNumber,
+      accountName: formValues.accountName,
+      bvn: formValues.bvn
     });
     
     // Save user info separately
@@ -120,17 +128,59 @@ const OnboardingScreen = ({ navigation }) => {
       email: formValues.email
     }));
     
-    // Save PayFast info if it was set up
-    if (formValues.setupPayFast) {
-      await AsyncStorage.setItem('payFastInfo', JSON.stringify({
-        merchantId: formValues.merchantId,
-        merchantKey: formValues.merchantKey
-      }));
-    }
+    // Set loading state
+    setLoading(true);
     
-    // Navigate to dashboard
-    if (navigation) {
-      navigation.navigate('Main');
+    try {
+      // Here we'd call an API to create the Paystack sub-account
+      // This is a mock implementation - in a real app, you'd call your backend
+      // which would then call Paystack's API to create the sub-account
+      const mockCreateSubaccount = async () => {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Return mock response
+        return {
+          status: true,
+          data: {
+            subaccount_id: 'SUB_' + Math.random().toString(36).substr(2, 9),
+            subaccount_code: 'ACCT_' + Math.random().toString(36).substr(2, 9),
+            percentage_split: 0.8, // 80% to sub-account
+            status: 'active'
+          }
+        };
+      };
+      
+      // Call the mock function (this would be your actual API call)
+      const response = await mockCreateSubaccount();
+      
+      if (response.status) {
+        // Save Paystack sub-account info
+        await AsyncStorage.setItem('paystackSubaccount', JSON.stringify(response.data));
+        
+        // Show success message
+        Alert.alert(
+          "Success",
+          "Your account has been set up successfully! You can now receive payments via WhatsApp.",
+          [{ text: "OK", onPress: () => navigation.navigate('Main') }]
+        );
+      } else {
+        // Handle error
+        Alert.alert(
+          "Error",
+          "There was a problem setting up your payment account. Please try again.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      console.error('Error creating sub-account:', error);
+      Alert.alert(
+        "Error",
+        "There was a problem setting up your payment account. Please try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -237,7 +287,7 @@ const OnboardingScreen = ({ navigation }) => {
       <TouchableOpacity onPress={() => navigation.navigate('SignIn')} style={styles.secondaryButton}>
         <Text style={styles.secondaryButtonText}>Back to Sign In</Text>
       </TouchableOpacity>
-    </View>
+          </View>
   );
 
   // Render Step 2: Business Details
@@ -245,15 +295,15 @@ const OnboardingScreen = ({ navigation }) => {
     <View style={styles.card}>
       <Text style={styles.stepTitle}>Business Details</Text>
       <View style={styles.formContainer}>
-        <View style={styles.inputGroup}>
+          <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Business Name</Text>
-          <TextInput
-            style={styles.textInput}
-            value={formValues.businessName}
+            <TextInput
+              style={styles.textInput}
+              value={formValues.businessName}
             onChangeText={text => updateForm('businessName', text)}
-            placeholder="Enter your business name"
-          />
-        </View>
+              placeholder="Enter your business name"
+            />
+          </View>
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Business Address</Text>
           <TextInput
@@ -284,7 +334,7 @@ const OnboardingScreen = ({ navigation }) => {
             autoCapitalize="none"
           />
         </View>
-        <View style={styles.inputGroup}>
+          <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Business Logo</Text>
           {!formValues.businessLogo ? (
             <TouchableOpacity style={styles.logoDropBox} onPress={pickImage}>
@@ -292,11 +342,11 @@ const OnboardingScreen = ({ navigation }) => {
               <Text style={styles.logoDropBoxText}>Click to upload logo</Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.logoPreviewContainer}>
+                <View style={styles.logoPreviewContainer}>
               <Image source={{ uri: formValues.businessLogo }} style={styles.logoPreview} />
               <TouchableOpacity style={styles.changeLogoButton} onPress={pickImage}>
-                <Text style={styles.changeLogoText}>Change</Text>
-              </TouchableOpacity>
+                    <Text style={styles.changeLogoText}>Change</Text>
+                  </TouchableOpacity>
             </View>
           )}
         </View>
@@ -304,59 +354,102 @@ const OnboardingScreen = ({ navigation }) => {
       <TouchableOpacity onPress={() => setCurrentStep(3)} style={styles.nextButton}>
         <Text style={styles.nextButtonText}>Next</Text>
       </TouchableOpacity>
-    </View>
-  );
+      </View>
+    );
 
-  // Render Step 3: Paystack Registration
+  // Render Step 3: Banking Details for Paystack
   const renderStep3 = () => (
     <View style={styles.card}>
-      <Text style={styles.stepTitle}>Paystack Registration</Text>
-      <Text style={styles.questionText}>Are you a registered Paystack merchant?</Text>
-      <View style={styles.optionsContainer}>
-        <TouchableOpacity
-          style={[styles.optionButton, formValues.isPaystackMerchant === true && styles.activeStep]}
-          onPress={() => updateForm('isPaystackMerchant', true)}
-        >
-          <Text style={styles.optionText}>Yes</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.optionButton, formValues.isPaystackMerchant === false && styles.activeStep]}
-          onPress={() => updateForm('isPaystackMerchant', false)}
-        >
-          <Text style={styles.optionText}>No</Text>
-        </TouchableOpacity>
-      </View>
-      {formValues.isPaystackMerchant === true && (
-        <View style={styles.formContainer}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Paystack Merchant ID</Text>
-            <TextInput
-              style={styles.textInput}
-              value={formValues.paystackMerchantId}
-              onChangeText={text => updateForm('paystackMerchantId', text)}
-              placeholder="Enter your Paystack Merchant ID"
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Paystack Merchant Key</Text>
-            <TextInput
-              style={styles.textInput}
-              value={formValues.paystackMerchantKey}
-              onChangeText={text => updateForm('paystackMerchantKey', text)}
-              placeholder="Enter your Paystack Merchant Key"
-            />
-          </View>
-                </View>
-      )}
-      {formValues.isPaystackMerchant === false && (
-        <View style={{ marginTop: 20 }}>
-          <Text style={{ color: '#1F2937', fontSize: 16, marginBottom: 8 }}>Not registered?</Text>
-          <TouchableOpacity onPress={() => {}}>
-            <Text style={{ color: '#3B82F6', textDecorationLine: 'underline' }}>Register for Paystack</Text>
-          </TouchableOpacity>
+      <Text style={styles.stepTitle}>Payment Setup</Text>
+      <Text style={styles.infoText}>
+        To receive payments through WhatsApp links, we need your bank account details to register you as a sub-account.
+        </Text>
+        
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Bank Name</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formValues.bankName}
+            onChangeText={text => updateForm('bankName', text)}
+            placeholder="Enter your bank name"
+          />
         </View>
-      )}
-      <TouchableOpacity onPress={handleFinish} style={styles.nextButton}>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Account Number</Text>
+              <TextInput
+                style={styles.textInput}
+            value={formValues.accountNumber}
+            onChangeText={text => updateForm('accountNumber', text)}
+            placeholder="Enter your account number"
+            keyboardType="numeric"
+              />
+            </View>
+            
+            <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Account Name</Text>
+              <TextInput
+                style={styles.textInput}
+            value={formValues.accountName}
+            onChangeText={text => updateForm('accountName', text)}
+            placeholder="Enter account holder name"
+              />
+            </View>
+            
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>BVN (Bank Verification Number)</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formValues.bvn}
+            onChangeText={text => updateForm('bvn', text)}
+            placeholder="Enter your BVN"
+            keyboardType="numeric"
+            secureTextEntry={true}
+          />
+          <Text style={styles.helperText}>
+            Your BVN is required by Paystack for KYC purposes. It will be securely stored.
+          </Text>
+        </View>
+        
+        <View style={styles.checkboxContainer}>
+            <TouchableOpacity 
+            style={[
+              styles.checkbox,
+              formValues.acceptPaystackTerms && styles.checkboxChecked
+            ]}
+            onPress={() => 
+              updateForm('acceptPaystackTerms', !formValues.acceptPaystackTerms)
+            }
+            >
+            {formValues.acceptPaystackTerms && (
+              <MaterialIcons name="check" size={16} color="#FFF" />
+            )}
+            </TouchableOpacity>
+          <Text style={styles.checkboxLabel}>
+            I agree to Paystack's terms and conditions for sub-accounts
+          </Text>
+        </View>
+          </View>
+            
+            <TouchableOpacity 
+        onPress={handleFinish} 
+        style={[
+          styles.nextButton,
+          (!formValues.bankName || 
+           !formValues.accountNumber || 
+           !formValues.accountName || 
+           !formValues.bvn || 
+           !formValues.acceptPaystackTerms) && styles.disabledButton
+        ]}
+        disabled={
+          !formValues.bankName || 
+          !formValues.accountNumber || 
+          !formValues.accountName || 
+          !formValues.bvn || 
+          !formValues.acceptPaystackTerms
+        }
+            >
         <Text style={styles.nextButtonText}>Finish</Text>
             </TouchableOpacity>
       </View>
@@ -620,6 +713,41 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     fontSize: 14,
     fontWeight: '500',
+  },
+  infoText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  helperText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    marginRight: 10,
+  },
+  checkboxChecked: {
+    backgroundColor: '#3B82F6',
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#4B5563',
+  },
+  disabledButton: {
+    backgroundColor: '#E5E7EB',
   },
 });
 
