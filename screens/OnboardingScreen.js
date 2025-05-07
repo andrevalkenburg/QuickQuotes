@@ -719,21 +719,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginTop: 8,
   },
-  logoPreviewContainer: {
-    alignItems: 'center',
-  },
-  changeLogoButton: {
-    marginTop: 8,
-    backgroundColor: '#EFF6FF',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  changeLogoText: {
-    color: '#3B82F6',
-    fontSize: 14,
-    fontWeight: '500',
-  },
   infoText: {
     fontSize: 18,
     fontWeight: '600',
