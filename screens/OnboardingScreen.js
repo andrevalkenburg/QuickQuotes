@@ -21,7 +21,9 @@ import { useAuth } from '../utils/AuthContext';
 const OnboardingScreen = ({ navigation }) => {
   // State management
   const [currentStep, setCurrentStep] = useState(1);
-  const { signUp } = useAuth();
+  
+  // Extract all needed auth functions at the component level
+  const { signUp, createOrUpdateUser, createBusiness, user } = useAuth();
   
   // Form values
   const [formValues, setFormValues] = useState({
@@ -67,6 +69,11 @@ const OnboardingScreen = ({ navigation }) => {
   const nextStep = async () => {
     // Validate fields in step 1
     if (currentStep === 1) {
+      if (!formValues.fullName) {
+        Alert.alert('Error', 'Full name is required');
+        return;
+      }
+      
       if (!formValues.email) {
         Alert.alert('Error', 'Email address is required');
         return;
@@ -87,16 +94,42 @@ const OnboardingScreen = ({ navigation }) => {
         return;
       }
       
-      // Create local account without Supabase
+      // Create account with Supabase
       setLoading(true);
       try {
-        // Use the mocked signUp function
-        await signUp(formValues.email, formValues.password);
+        console.log('Creating account for:', formValues.email);
+        
+        // Use Supabase signUp for v1.35.7 with proper parameters
+        const { data, error } = await signUp(
+          formValues.email, 
+          formValues.password,
+          {
+            data: {
+              full_name: formValues.fullName,
+            }
+          }
+        );
+        
+        if (error) {
+          throw error;
+        }
+        
+        console.log('User signed up successfully:', data);
+        
+        // Give a moment for session to initialize
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verify user is logged in before proceeding
+        if (!user || !user.id) {
+          console.log('User not properly authenticated after signup, moving to step 2 anyway');
+          // We will move to step 2 anyway and handle auth state later
+        }
         
         // Move to next step
         setCurrentStep(prev => prev + 1);
       } catch (error) {
-        Alert.alert('Error', 'Failed to create account. Please try again.');
+        console.error('Signup error:', error);
+        Alert.alert('Error', error.message || 'Failed to create account. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -114,79 +147,103 @@ const OnboardingScreen = ({ navigation }) => {
     }
   };
 
-  // Handle finish (submit or navigate to dashboard)
+  // Handle finish (submit and create user profile and business)
   const handleFinish = async () => {
     console.log('Onboarding complete!', formValues);
-    
-    // Save to global state and AsyncStorage
-    await globalState.updateBusinessInfo({
-      businessName: formValues.businessName,
-      businessLogo: formValues.businessLogo,
-      businessAddress: formValues.businessAddress,
-      businessPhone: formValues.businessPhone,
-      businessEmail: formValues.businessEmail,
-      // Save bank details
-      bankName: formValues.bankName,
-      accountNumber: formValues.accountNumber,
-      accountName: formValues.accountName,
-      bvn: formValues.bvn
-    });
-    
-    // Save user info separately
-    await AsyncStorage.setItem('userInfo', JSON.stringify({
-      name: formValues.fullName,
-      email: formValues.email
-    }));
     
     // Set loading state
     setLoading(true);
     
     try {
-      // Here we'd call an API to create the Paystack sub-account
-      // This is a mock implementation - in a real app, you'd call your backend
-      // which would then call Paystack's API to create the sub-account
-      const mockCreateSubaccount = async () => {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Return mock response
-        return {
-          status: true,
-          data: {
-            subaccount_id: 'SUB_' + Math.random().toString(36).substr(2, 9),
-            subaccount_code: 'ACCT_' + Math.random().toString(36).substr(2, 9),
-            percentage_split: 0.8, // 80% to sub-account
-            status: 'active'
-          }
+      console.log('Current user:', user);
+      
+      // If user is not authenticated yet, attempt to get the user from session
+      // This is a workaround for when user signup succeeded but auth state isn't updated yet
+      if (!user?.id) {
+        // Show a message that we're finalizing account setup
+        Alert.alert(
+          "Finalizing Setup",
+          "Your account is being set up. Please try again in a moment.",
+          [{ text: "OK", onPress: () => setCurrentStep(1) }]
+        );
+        setLoading(false);
+        return;
+      }
+      
+      // First, create the user profile
+      try {
+        // Create user profile in Supabase
+        const profileData = {
+          full_name: formValues.fullName,
+          email: formValues.email,
+          avatar_url: null
         };
-      };
+        
+        console.log('Creating user profile with data:', profileData);
+        await createOrUpdateUser(profileData);
+        console.log('User profile created successfully');
+      } catch (profileError) {
+        console.error('Profile creation error:', profileError);
+        Alert.alert(
+          "Error",
+          "There was an issue creating your profile. " + profileError.message,
+          [{ text: "OK" }]
+        );
+        setLoading(false);
+        return;
+      }
       
-      // Call the mock function (this would be your actual API call)
-      const response = await mockCreateSubaccount();
-      
-      if (response.status) {
-        // Save Paystack sub-account info
-        await AsyncStorage.setItem('paystackSubaccount', JSON.stringify(response.data));
+      // Now, try to create the business
+      try {
+        // Create business in Supabase
+        const businessData = {
+          name: formValues.businessName,
+          address: formValues.businessAddress,
+          phone: formValues.businessPhone,
+          email: formValues.businessEmail,
+          logo_url: formValues.businessLogo,
+          // Banking details
+          bank_name: formValues.bankName,
+          account_number: formValues.accountNumber,
+          account_name: formValues.accountName,
+          bvn: formValues.bvn
+        };
+        
+        console.log('Creating business with data:', businessData);
+        const business = await createBusiness(businessData);
+        console.log('Business created successfully:', business);
         
         // Show success message
         Alert.alert(
           "Success",
-          "Your account has been set up successfully! You can now receive payments via WhatsApp.",
+          "Your account has been set up successfully!",
+          [{ text: "OK", onPress: () => navigation.navigate('Main') }]
+        );
+      } catch (businessError) {
+        console.error('Business creation error:', businessError);
+        
+        // If there's an RLS policy error, show a specific message but still navigate
+        if (businessError.message && businessError.message.includes('policy')) {
+          Alert.alert(
+            "Account Created",
+            "Your account was created, but there was an issue with business setup. " +
+            "You can complete this later in your profile settings.",
           [{ text: "OK", onPress: () => navigation.navigate('Main') }]
         );
       } else {
-        // Handle error
         Alert.alert(
-          "Error",
-          "There was a problem setting up your payment account. Please try again.",
-          [{ text: "OK" }]
+            "Partial Setup Complete",
+            "Your account was created, but we couldn't set up your business details. " +
+            "You can add these later in settings.",
+            [{ text: "OK", onPress: () => navigation.navigate('Main') }]
         );
+        }
       }
     } catch (error) {
-      console.error('Error creating sub-account:', error);
+      console.error('Error during onboarding completion:', error);
       Alert.alert(
         "Error",
-        "There was a problem setting up your payment account. Please try again.",
+        error.message || "There was a problem completing your account setup. Please try again.",
         [{ text: "OK" }]
       );
     } finally {

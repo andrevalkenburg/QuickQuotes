@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -14,6 +14,13 @@ import ReportsScreen from './screens/ReportsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import TeamScreen from './screens/TeamScreen';
 import BottomNavBar from './components/BottomNavBar';
+import SupabaseTest from './components/SupabaseTest';
+
+// Create a context for app-wide connection status
+export const ConnectionContext = createContext({
+  showConnectionTest: false,
+  setShowConnectionTest: () => {},
+});
 
 // Create stacks for main flow and nested screens
 const Stack = createNativeStackNavigator();
@@ -54,8 +61,31 @@ const MainScreen = ({ navigation, route }) => {
   );
 };
 
-export default function App() {
+// Regular login screen without forced connection test
+const LoginScreenWithOptionalTest = (props) => {
+  // Access the connection context
+  const { showConnectionTest } = useContext(ConnectionContext);
+
   return (
+    <View style={{ flex: 1 }}>
+      <LoginScreen {...props} />
+      {showConnectionTest && <SupabaseTest />}
+    </View>
+  );
+};
+
+export default function App() {
+  // State to determine if we should show the connection test
+  const [showConnectionTest, setShowConnectionTest] = useState(false);
+
+  // Connection context value
+  const connectionContextValue = {
+    showConnectionTest,
+    setShowConnectionTest,
+  };
+
+  return (
+    <ConnectionContext.Provider value={connectionContextValue}>
     <AuthProvider>
       <PaperProvider>
         <SafeAreaProvider>
@@ -64,7 +94,7 @@ export default function App() {
             <Stack.Navigator initialRouteName="Login">
               <Stack.Screen 
                 name="Login" 
-                component={LoginScreen} 
+                  component={LoginScreenWithOptionalTest} 
                 options={{ headerShown: false }}
               />
               <Stack.Screen 
@@ -96,6 +126,7 @@ export default function App() {
         </SafeAreaProvider>
       </PaperProvider>
     </AuthProvider>
+    </ConnectionContext.Provider>
   );
 }
 

@@ -18,13 +18,23 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // Use mock sign in
-      await signIn(email, password);
+      // Use Supabase authentication
+      const { data, error } = await signIn(email, password);
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log('Login successful:', data);
       
       // Navigate to main screen
       navigation.navigate('Main');
     } catch (error) {
-      Alert.alert('Authentication Error', 'Failed to sign in. Please check your credentials.');
+      console.error('Sign-in error:', error);
+      Alert.alert(
+        'Authentication Error', 
+        error.message || 'Failed to sign in. Please check your credentials.'
+      );
     } finally {
       setLoading(false);
     }
