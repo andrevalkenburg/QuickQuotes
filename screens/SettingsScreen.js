@@ -48,7 +48,7 @@ const SettingsScreen = ({ navigation }) => {
               // Navigate back to sign in screen
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'SignIn' }],
+                routes: [{ name: 'Login' }],
               });
             } catch (error) {
               console.error("Error signing out:", error);

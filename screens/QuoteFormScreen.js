@@ -66,14 +66,19 @@ const QuoteFormScreen = ({ navigation, route }) => {
   // Handle hardware back button
   useFocusEffect(
     React.useCallback(() => {
-      const onBackPress = () => {
-        handleBackPress();
-        return true; // Prevent default behavior
-      };
+      // Only add backHandler on Android where it's supported
+      if (Platform.OS === 'android') {
+        const onBackPress = () => {
+          handleBackPress();
+          return true; // Prevent default behavior
+        };
 
-      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+        BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
-      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+        return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+      }
+      // Return empty cleanup function for iOS
+      return () => {};
     }, [clientName, contactInfo, clientAddress, lineItems, description, formModified])
   );
 

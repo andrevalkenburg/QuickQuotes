@@ -9,7 +9,6 @@ import { AuthProvider } from './utils/AuthContext';
 import DashboardScreen from './screens/DashboardScreen';
 import QuoteFormScreen from './screens/QuoteFormScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
-import SignInScreen from './screens/SignInScreen';
 import LoginScreen from './screens/LoginScreen';
 import ReportsScreen from './screens/ReportsScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -62,12 +61,7 @@ export default function App() {
         <SafeAreaProvider>
           <NavigationContainer>
             <StatusBar style="light" />
-            <Stack.Navigator initialRouteName="SignIn">
-              <Stack.Screen 
-                name="SignIn" 
-                component={SignInScreen} 
-                options={{ headerShown: false }}
-              />
+            <Stack.Navigator initialRouteName="Login">
               <Stack.Screen 
                 name="Login" 
                 component={LoginScreen} 

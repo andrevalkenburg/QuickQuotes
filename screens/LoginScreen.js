@@ -35,10 +35,6 @@ const LoginScreen = ({ navigation }) => {
     navigation.navigate('Onboarding');
   };
 
-  const switchToMagicLink = () => {
-    navigation.navigate('SignIn');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -47,7 +43,7 @@ const LoginScreen = ({ navigation }) => {
       >
         <View style={styles.header}>
           <Text style={styles.title}>QuickQuote</Text>
-          <Text style={styles.subtitle}>Login to your account</Text>
+          <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>
 
         <View style={styles.formContainer}>
@@ -82,18 +78,8 @@ const LoginScreen = ({ navigation }) => {
             style={styles.button}
             disabled={loading}
           >
-            Login
+            Sign In
           </Button>
-
-          <TouchableOpacity
-            onPress={switchToMagicLink}
-            style={styles.switchAuthContainer}
-            disabled={loading}
-          >
-            <Text style={styles.switchAuthText}>
-              Sign in with Magic Link
-            </Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleSignUp}
@@ -144,15 +130,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 8,
     backgroundColor: '#3B82F6',
-  },
-  switchAuthContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  switchAuthText: {
-    color: '#3B82F6',
-    fontSize: 16,
-    fontWeight: '500',
   },
   signUpContainer: {
     marginTop: 20,

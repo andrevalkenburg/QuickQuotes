@@ -65,36 +65,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Sign in with magic link function (mocked)
-  const signInWithMagicLink = async (email) => {
-    setLoading(true);
-    try {
-      // In a real app, this would send an email with a magic link
-      // For this mock, we'll just create and store a user
-      
-      // Mock user creation
-      const user = { 
-        id: generateUniqueId(), 
-        email, 
-        created_at: new Date().toISOString() 
-      };
-      
-      // Store user in AsyncStorage
-      await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      
-      // Update state
-      setUser(user);
-      
-      return { data: { user }, error: null };
-    } catch (error) {
-      console.error('Error sending magic link:', error.message);
-      return { data: null, error };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sign in function with password (mocked)
+  // Sign in function with password
   const signIn = async (email, password) => {
     setLoading(true);
     try {
@@ -253,7 +224,6 @@ export const AuthProvider = ({ children }) => {
         loading,
         signUp,
         signIn,
-        signInWithMagicLink,
         signOut,
         createOrUpdateUser,
         createBusiness,
