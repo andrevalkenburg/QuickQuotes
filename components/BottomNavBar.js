@@ -1,14 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useAuth } from '../utils/AuthContext';
 
 const BottomNavBar = ({ activeTab, onTabChange }) => {
-  const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'report', label: 'Report', icon: 'bar-chart' },
-    { id: 'team', label: 'Team', icon: 'group' },
-    { id: 'settings', label: 'Settings', icon: 'settings' }
-  ];
+  const { getUserProfile } = useAuth();
+  const [userRole, setUserRole] = useState('team_member'); // Default to most restrictive role
+  
+  useEffect(() => {
+    // Fetch user profile to determine role
+    const fetchUserProfile = async () => {
+      try {
+        const userProfile = await getUserProfile();
+        if (userProfile && userProfile.role) {
+          setUserRole(userProfile.role);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, []);
+  
+  const getAvailableTabs = () => {
+    // Base tabs available for all users
+    const baseTabs = [
+      { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+      { id: 'settings', label: 'Settings', icon: 'settings' }
+    ];
+    
+    // Add restricted tabs only for owners
+    if (userRole === 'owner') {
+      return [
+        ...baseTabs.slice(0, 1), // Dashboard
+        { id: 'report', label: 'Report', icon: 'bar-chart' },
+        { id: 'team', label: 'Team', icon: 'group' },
+        ...baseTabs.slice(1) // Settings
+      ];
+    }
+    
+    return baseTabs;
+  };
+  
+  const tabs = getAvailableTabs();
 
   return (
     <View style={styles.container}>

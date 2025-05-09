@@ -18,13 +18,23 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // Use mock sign in
-      await signIn(email, password);
+      // Use Supabase authentication
+      const { data, error } = await signIn(email, password);
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log('Login successful:', data);
       
       // Navigate to main screen
       navigation.navigate('Main');
     } catch (error) {
-      Alert.alert('Authentication Error', 'Failed to sign in. Please check your credentials.');
+      console.error('Sign-in error:', error);
+      Alert.alert(
+        'Authentication Error', 
+        error.message || 'Failed to sign in. Please check your credentials.'
+      );
     } finally {
       setLoading(false);
     }
@@ -33,6 +43,11 @@ const LoginScreen = ({ navigation }) => {
   const handleSignUp = () => {
     // Navigate to onboarding for signup
     navigation.navigate('Onboarding');
+  };
+
+  const handleTeamJoin = () => {
+    // Navigate to team join flow
+    navigation.navigate('TeamJoin');
   };
 
   return (
@@ -90,6 +105,16 @@ const LoginScreen = ({ navigation }) => {
               Don't have an account? <Text style={styles.signUpLink}>Sign up</Text>
             </Text>
           </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={handleTeamJoin}
+            style={styles.teamJoinContainer}
+            disabled={loading}
+          >
+            <Text style={styles.teamJoinText}>
+              Joining your team? <Text style={styles.teamJoinLink}>Click here</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -140,6 +165,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   signUpLink: {
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  teamJoinContainer: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  teamJoinText: {
+    color: '#6B7280',
+    fontSize: 16,
+  },
+  teamJoinLink: {
     color: '#3B82F6',
     fontWeight: '600',
   },
